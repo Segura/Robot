@@ -1,7 +1,8 @@
+#include <Bounce2.h>
 #include "Arm.h"
-// #include <HardwareSerial.h>
+#include "Platform.h"
 
-// ДВИГАТЕЛИ
+// Двигатели
 
 #define LEFT_ENGINE_DIRECTION_PIN 47
 #define LEFT_ENGINE_SPEED_PIN 46
@@ -26,68 +27,71 @@
 #define POT_3_PIN A12
 #define POT_4_PIN A13
 #define POT_5_PIN A14
+#define POT_6_PIN A15
 
 // Кнопки
 
-#define MANUAL_MODE_BUTTON_PIN 35 // B1
+#define DEBOUNCE_INTERVAL 5
+
+#define MANUAL_MODE_BUTTON_PIN 35   // B1
+#define TEST_BUTTON_1_PIN 31        // B5
+#define TEST_BUTTON_2_PIN 30        // B6
 
 // Светодиоды
 
 #define MANUAL_MODE_LED_PIN 22 // LED1
+#define CALIBRATION_LED_PIN 23 // LED2
 
 Arm arm;
-bool manualModeButtonLastState = LOW;
-bool manualModeButtonCurrentState = LOW;
+Platform platform;
 
-volatile int countLeft = 0;
-volatile int countRight = 0;
+Bounce manualModeButton = Bounce();
+Bounce testButton = Bounce();
 
 void setup()
 {
     Serial.begin(9600);
     // Ручной режим
-    pinMode(MANUAL_MODE_BUTTON_PIN, INPUT);
+    manualModeButton.attach(MANUAL_MODE_BUTTON_PIN);
+    manualModeButton.interval(DEBOUNCE_INTERVAL);
+
     pinMode(MANUAL_MODE_LED_PIN, OUTPUT);
 
-    //  pinMode(LEFT_ENGINE_ENCODER_PIN, INPUT);
-    //  pinMode(RIGHT_ENGINE_ENCODER_PIN, INPUT);
-    //  attachInterrupt(digitalPinToInterrupt(LEFT_ENGINE_ENCODER_PIN), readLeftEngineEncoder, RISING);
-    //  attachInterrupt(digitalPinToInterrupt(RIGHT_ENGINE_ENCODER_PIN), readRightEngineEncoder, RISING);
-    // pinMode(LEFT_ENGINE_DIRECTION_PIN, OUTPUT);
-    // pinMode(LEFT_ENGINE_SPEED_PIN, OUTPUT);
-    //
-    // pinMode(RIGHT_ENGINE_DIRECTION_PIN, OUTPUT);
-    // pinMode(RIGHT_ENGINE_SPEED_PIN, OUTPUT);
-    //
-    // digitalWrite(LEFT_ENGINE_DIRECTION_PIN, LOW);
-    // analogWrite(LEFT_ENGINE_SPEED_PIN, 150);
-    // digitalWrite(RIGHT_ENGINE_DIRECTION_PIN, LOW);
-    // analogWrite(RIGHT_ENGINE_SPEED_PIN, 150);
-    arm.init(ARM_ROTATION_SERVO_PIN, ARM_LIFT_SERVO_PIN, CLAW_LIFT_SERVO_PIN, CLAW_ROTATION_SERVO_PIN, CLAW_SERVO_PIN);
+    // arm.init(ARM_ROTATION_SERVO_PIN, ARM_LIFT_SERVO_PIN, CLAW_LIFT_SERVO_PIN, CLAW_ROTATION_SERVO_PIN, CLAW_SERVO_PIN);
+    platform.init(LEFT_ENGINE_DIRECTION_PIN, LEFT_ENGINE_SPEED_PIN, RIGHT_ENGINE_DIRECTION_PIN, RIGHT_ENGINE_SPEED_PIN);
 
-    arm.moveTo(90, 90, 90, 90, 90, 3000);
+    attachInterrupt(digitalPinToInterrupt(LEFT_ENGINE_ENCODER_PIN), readLeftEngineEncoder, RISING);
+    attachInterrupt(digitalPinToInterrupt(RIGHT_ENGINE_ENCODER_PIN), readRightEngineEncoder, RISING);
+
+    arm.reset();
+    
+    // Тестовое
+    testButton.attach(TEST_BUTTON_1_PIN);
+    testButton.interval(DEBOUNCE_INTERVAL);
 }
 
 void loop()
 {
+//     digitalWrite(LEFT_ENGINE_DIRECTION_PIN, LOW);
+//     analogWrite(LEFT_ENGINE_SPEED_PIN, 150);
     // Serial.print(countLeft);
     // Serial.print(" ");
     // Serial.print(countRight);
     // Serial.println();
 
-    arm.manualMove(
-        map(analogRead(POT_1_PIN), 0, 1023, 10, 170),
-        map(analogRead(POT_2_PIN), 0, 1023, 10, 170),
-        map(analogRead(POT_3_PIN), 0, 1023, 10, 170),
-        map(analogRead(POT_4_PIN), 0, 1023, 10, 170),
-        map(analogRead(POT_5_PIN), 0, 1023, 10, 170)
-    );
+    // arm.manualMove(
+    //     map(analogRead(POT_1_PIN), 0, 1023, 0, 180),
+    //     map(analogRead(POT_2_PIN), 0, 1023, 0, 180),
+    //     map(analogRead(POT_3_PIN), 0, 1023, 0, 180),
+    //     map(analogRead(POT_4_PIN), 0, 1023, 0, 180),
+    //     map(analogRead(POT_5_PIN), 0, 1023, 0, 180));
 
     arm.loop();
+    platform.loop();
 
     // Ручной режим
-    manualModeButtonCurrentState = digitalRead(MANUAL_MODE_BUTTON_PIN);
-    if (manualModeButtonLastState == LOW && manualModeButtonCurrentState == HIGH)
+    manualModeButton.update();
+    if (manualModeButton.fell())
     {
         if (arm.isManual())
         {
@@ -100,15 +104,19 @@ void loop()
             digitalWrite(MANUAL_MODE_LED_PIN, HIGH);
         }
     }
-    manualModeButtonLastState = manualModeButtonCurrentState;
+    // Тестовое
+    testButton.update();
+    if (testButton.fell()) {
+        platform.moveForward(5);
+    }
 }
 
 void readLeftEngineEncoder()
 {
-    countLeft++;
+    platform.tickLeft();
 }
 
 void readRightEngineEncoder()
 {
-    countRight++;
+    platform.tickRight();
 }

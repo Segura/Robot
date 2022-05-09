@@ -1,6 +1,20 @@
 #ifndef Arm_h
 #define Arm_h
+
 #include <Servo.h>
+
+#define ARM_ROTATION_MIN_VALUE 0
+#define ARM_ROTATION_MAX_VALUE 180
+#define ARM_LIFT_MIN_VALUE 10
+#define ARM_LIFT_MAX_VALUE 170
+#define CLAW_LIFT_MIN_VALUE 10
+#define CLAW_LIFT_MAX_VALUE 170
+#define CLAW_ROTATION_MIN_VALUE 10
+#define CLAW_ROTATION_MAX_VALUE 170
+#define CLAW_MIN_VALUE 10
+#define CLAW_MAX_VALUE 170
+
+#define NOT_MOVE -1
 
 class Arm
 {
@@ -24,6 +38,7 @@ public:
         byte clawRotationAngle,
         byte clawAngle,
         long duration);
+    void reset();
 
 private:
     bool _manualMode;
