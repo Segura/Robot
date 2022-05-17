@@ -10,11 +10,11 @@
 class Platform
 {
 public:
-    Platform();
-    void init(int leftEngineDirectionPin,
-              int leftEngineSpeedPin,
-              int rightEngineDirectionPin,
-              int rightEngineSpeedPin);
+    Platform(int leftEngineDirectionPin,
+             int leftEngineSpeedPin,
+             int rightEngineDirectionPin,
+             int rightEngineSpeedPin);
+    void init();
     void loop();
     void moveForward(int distance);
     void tickLeft();
@@ -25,10 +25,10 @@ private:
     volatile unsigned int countLeft;
     volatile unsigned int countRight;
     unsigned int distanceCount;
-    int _leftEngineDirectionPin;
-    int _leftEngineSpeedPin;
-    int _rightEngineDirectionPin;
-    int _rightEngineSpeedPin;
+    int leftEngineDirectionPin;
+    int leftEngineSpeedPin;
+    int rightEngineDirectionPin;
+    int rightEngineSpeedPin;
 };
 
 #endif

@@ -1,45 +1,87 @@
 #include "Arm.h"
 
-#define DEFAULT_POSITION 90
-
 float easyInOut(float x)
 {
     return -(cos(PI * x) - 1) / 2;
 }
 
-Arm::Arm() {}
+Arm::Arm(int rotationPin, int armLiftPin, int clawLiftPin, int clawRotationPin, int clawPin)
+{
+    this->rotationPin = rotationPin;
+    this->armLiftPin = armLiftPin;
+    this->clawLiftPin = clawLiftPin;
+    this->clawRotationPin = clawRotationPin;
+    this->clawPin = clawPin;
+}
 
-void Arm::init(int rotationPin, int armLiftPin, int clawLiftPin, int clawRotationPin, int clawPin)
+void Arm::init(ArmSettings settings)
 {
     this->manualModeOff();
 
-    this->_armRotationServo.write(DEFAULT_POSITION);
-    this->_armLiftServo.write(DEFAULT_POSITION);
-    this->_clawLiftServo.write(DEFAULT_POSITION);
-    this->_clawRotationServo.write(DEFAULT_POSITION);
-    this->_clawServo.write(DEFAULT_POSITION);
+    this->settings = settings;
 
-    this->_armRotationServo.attach(rotationPin);
-    this->_armLiftServo.attach(armLiftPin);
-    this->_clawLiftServo.attach(clawLiftPin);
-    this->_clawRotationServo.attach(clawRotationPin);
-    this->_clawServo.attach(clawPin);
+    // TODO: перенести в attach
+    this->armRotationServo.write(settings.armRotation.getCenter());
+    this->armLiftServo.write(settings.armLift.getCenter());
+    this->clawLiftServo.write(settings.clawLift.getCenter());
+    this->clawRotationServo.write(settings.clawRotation.getCenter());
+    this->clawServo.write(settings.claw.getCenter());
+}
+
+ArmSettings Arm::getSettings()
+{
+    return this->settings;
+}
+
+void Arm::attach()
+{
+    this->armRotationServo.attach(rotationPin);
+    this->armLiftServo.attach(armLiftPin);
+    this->clawLiftServo.attach(clawLiftPin);
+    this->clawRotationServo.attach(clawRotationPin);
+    this->clawServo.attach(clawPin);
+}
+
+void Arm::detach()
+{
+    this->armRotationServo.detach();
+    this->armLiftServo.detach();
+    this->clawLiftServo.detach();
+    this->clawRotationServo.detach();
+    this->clawServo.detach();
 }
 
 void Arm::manualModeOn()
 {
-    this->_manualMode = true;
+    this->manualMode = true;
 }
 
 void Arm::manualModeOff()
 {
-    this->_manualMode = false;
+    this->manualMode = false;
 }
 
 bool Arm::isManual()
 {
-    return this->_manualMode;
+    return this->manualMode;
 }
+
+void Arm::startCalibration(){
+
+};
+
+void Arm::calibrating(int value){
+
+};
+
+bool Arm::nextCalibrationStep()
+{
+    return false;
+};
+
+void Arm::stopValibrating(){
+
+};
 
 void Arm::manualMove(byte armRotationAngle,
                      byte armLiftAngle,
@@ -47,13 +89,13 @@ void Arm::manualMove(byte armRotationAngle,
                      byte clawRotationAngle,
                      byte clawAngle)
 {
-    if (this->_manualMode)
+    if (this->manualMode)
     {
-        this->_armRotationServo.write(constrain(armRotationAngle, ARM_ROTATION_MIN_VALUE, ARM_ROTATION_MAX_VALUE));
-        this->_armLiftServo.write(constrain(armLiftAngle, ARM_LIFT_MIN_VALUE, ARM_LIFT_MAX_VALUE));
-        this->_clawLiftServo.write(constrain(clawLiftAngle, CLAW_LIFT_MIN_VALUE, CLAW_LIFT_MAX_VALUE));
-        this->_clawRotationServo.write(constrain(clawRotationAngle, CLAW_ROTATION_MIN_VALUE, CLAW_ROTATION_MAX_VALUE));
-        this->_clawServo.write(clawAngle);
+        this->writeRaw(this->armRotationServo, this->settings.armRotation, armRotationAngle);
+        this->writeRaw(this->armLiftServo, this->settings.armLift, armLiftAngle);
+        this->writeRaw(this->clawLiftServo, this->settings.clawLift, clawLiftAngle);
+        this->writeRaw(this->clawRotationServo, this->settings.clawRotation, clawRotationAngle);
+        this->writeRaw(this->clawServo, this->settings.claw, clawAngle);
     }
 }
 
@@ -61,54 +103,72 @@ void Arm::moveTo(byte armRotationAngle,
                  byte armLiftAngle,
                  byte clawLiftAngle,
                  byte clawRotationAngle,
-                 byte clawAngle,
                  long duration)
 {
-    if (!this->_manualMode)
+    if (!this->manualMode)
     {
-        this->_transitionStart = millis();
-        this->_transitionDuration = constrain(duration, 1000, 10000);
-        this->_transitionEnd = this->_transitionStart + this->_transitionDuration;
+        this->transitionStart = millis();
+        this->transitionDuration = constrain(duration, 1000, 10000);
+        this->transitionEnd = this->transitionStart + this->transitionDuration;
 
-        if (armRotationAngle > NOT_MOVE)
-        {
-            this->_armRotationFrom = this->_armRotationServo.read();
-            this->_armRotationTo = constrain(armRotationAngle, ARM_ROTATION_MIN_VALUE, ARM_ROTATION_MAX_VALUE);
-        }
-        if (armLiftAngle > NOT_MOVE)
-        {
-            this->_armLiftFrom = this->_armLiftServo.read();
-            this->_armLiftTo = constrain(armLiftAngle, ARM_LIFT_MIN_VALUE, ARM_LIFT_MAX_VALUE);
-        }
-        if (clawLiftAngle > NOT_MOVE)
-        {
-            this->_clawLiftFrom = this->_clawLiftServo.read();
-            this->_clawLiftTo = constrain(clawLiftAngle, CLAW_LIFT_MIN_VALUE, CLAW_LIFT_MAX_VALUE);
-        }
-        if (clawRotationAngle > NOT_MOVE)
-        {
-            this->_clawRotationFrom = this->_clawRotationServo.read();
-            this->_clawRotationTo = constrain(clawRotationAngle, CLAW_ROTATION_MIN_VALUE, CLAW_ROTATION_MAX_VALUE);
-        }
+        this->writeAnimation(this->armRotationServo, this->settings.armLift, armRotationAngle);
+        this->writeAnimation(this->armLiftServo, this->settings.armLift, armLiftAngle);
+        this->writeAnimation(this->clawLiftServo, this->settings.clawLift, clawLiftAngle);
+        this->writeAnimation(this->clawRotationServo, this->settings.clawRotation, clawRotationAngle);
     }
+}
+
+void Arm::writeRaw(Servo servo, ServoSetting settings, byte angle)
+{
+    servo.write(this->mapAngle(settings, angle));
+}
+
+void Arm::writeAnimation(Servo servo, ServoSetting settings, byte angle)
+{
+    if (angle > NOT_MOVE)
+    {
+        this->armRotationFrom = servo.read();
+        this->armRotationTo = this->mapAngle(settings, angle);
+    }
+}
+
+byte Arm::mapAngle(ServoSetting settings, byte angle)
+{
+    return map(angle, MIN_INPUT_ANGLE, MAX_INPUT_ANGLE, settings.min, settings.max);
 }
 
 void Arm::loop()
 {
     long currentTime = millis();
-    if (currentTime > this->_transitionEnd)
+    if (currentTime > this->transitionEnd)
     {
         return;
     }
-    long timePassed = currentTime - this->_transitionStart;
-    float progress = easyInOut(1.0f * timePassed / this->_transitionDuration);
-    this->_armRotationServo.write(this->_armRotationFrom + (this->_armRotationTo - this->_armRotationFrom) * progress);
-    this->_armLiftServo.write(this->_armLiftFrom + (this->_armLiftTo - this->_armLiftFrom) * progress);
-    this->_clawLiftServo.write(this->_clawLiftFrom + (this->_clawLiftTo - this->_clawLiftFrom) * progress);
-    this->_clawRotationServo.write(this->_clawRotationFrom + (this->_clawRotationTo - this->_clawRotationFrom) * progress);
+    long timePassed = currentTime - this->transitionStart;
+    float progress = easyInOut(1.0f * timePassed / this->transitionDuration);
+    this->armRotationServo.write(this->armRotationFrom + (this->armRotationTo - this->armRotationFrom) * progress);
+    this->armLiftServo.write(this->armLiftFrom + (this->armLiftTo - this->armLiftFrom) * progress);
+    this->clawLiftServo.write(this->clawLiftFrom + (this->clawLiftTo - this->clawLiftFrom) * progress);
+    this->clawRotationServo.write(this->clawRotationFrom + (this->clawRotationTo - this->clawRotationFrom) * progress);
+}
+
+void Arm::openClaw()
+{
+    this->clawServo.write(this->settings.claw.max);
+}
+
+void Arm::closeClaw()
+{
+    this->clawServo.write(this->settings.claw.min);
 }
 
 void Arm::reset()
 {
-    this->moveTo(DEFAULT_POSITION, DEFAULT_POSITION, DEFAULT_POSITION, DEFAULT_POSITION, DEFAULT_POSITION, 1000);
+    this->moveTo(
+        this->settings.armRotation.getCenter(),
+        this->settings.armLift.getCenter(),
+        this->settings.clawLift.getCenter(),
+        this->settings.clawRotation.getCenter(),
+        1000);
+    this->openClaw();
 }

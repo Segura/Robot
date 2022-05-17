@@ -2,25 +2,49 @@
 #define Arm_h
 
 #include <Servo.h>
+#include "Component.h"
+#include "ICalibratable.h"
 
-#define ARM_ROTATION_MIN_VALUE 0
-#define ARM_ROTATION_MAX_VALUE 180
-#define ARM_LIFT_MIN_VALUE 10
-#define ARM_LIFT_MAX_VALUE 170
-#define CLAW_LIFT_MIN_VALUE 10
-#define CLAW_LIFT_MAX_VALUE 170
-#define CLAW_ROTATION_MIN_VALUE 10
-#define CLAW_ROTATION_MAX_VALUE 170
-#define CLAW_MIN_VALUE 10
-#define CLAW_MAX_VALUE 170
+#define MIN_INPUT_ANGLE 0
+#define MAX_INPUT_ANGLE 180
+
+#define DEFAULT_VALUE 90
+#define DEFAULT_MIN_VALUE 0
+#define DEFAULT_MAX_VALUE 180
 
 #define NOT_MOVE -1
 
-class Arm
+struct ServoSetting
+{
+    byte min = DEFAULT_MIN_VALUE;
+    byte max = DEFAULT_MAX_VALUE;
+    byte getCenter()
+    {
+        return (min + max) / 2;
+    }
+};
+
+struct ArmSettings
+{
+    ServoSetting armRotation;
+    ServoSetting armLift;
+    ServoSetting clawLift;
+    ServoSetting clawRotation;
+    ServoSetting claw;
+};
+
+class Arm : public Component<ArmSettings>, public ICalibratable
 {
 public:
-    Arm();
-    void init(int rotationPin, int armLiftPin, int clawLiftPin, int clawRotationPin, int clawPin);
+    Arm(int rotationPin, int armLiftPin, int clawLiftPin, int clawRotationPin, int clawPin);
+    void init(ArmSettings settings);
+    ArmSettings getSettings();
+    void startCalibration();
+    void calibrating(int value);
+    bool nextCalibrationStep();
+    void stopValibrating();
+    void attach();
+    void detach();
     void loop();
     void manualModeOn();
     void manualModeOff();
@@ -36,30 +60,40 @@ public:
         byte armLiftAngle,
         byte clawLiftAngle,
         byte clawRotationAngle,
-        byte clawAngle,
         long duration);
+    void openClaw();
+    void closeClaw();
     void reset();
 
 private:
-    bool _manualMode;
-    Servo _armRotationServo;
-    Servo _armLiftServo;
-    Servo _clawLiftServo;
-    Servo _clawRotationServo;
-    Servo _clawServo;
-    long _transitionStart;
-    long _transitionEnd;
-    long _transitionDuration;
-    int _armRotationFrom;
-    int _armRotationTo;
-    int _armLiftFrom;
-    int _armLiftTo;
-    int _clawLiftFrom;
-    int _clawLiftTo;
-    int _clawRotationFrom;
-    int _clawRotationTo;
-    int _clawFrom;
-    int _clawTo;
+    void writeRaw(Servo servo, ServoSetting, byte angle);
+    void writeAnimation(Servo servo, ServoSetting, byte angle);
+    byte mapAngle(ServoSetting settings, byte angle);
+    ArmSettings settings;
+    bool manualMode;
+    int rotationPin;
+    int armLiftPin;
+    int clawLiftPin;
+    int clawRotationPin;
+    int clawPin;
+    Servo armRotationServo;
+    Servo armLiftServo;
+    Servo clawLiftServo;
+    Servo clawRotationServo;
+    Servo clawServo;
+    long transitionStart;
+    long transitionEnd;
+    long transitionDuration;
+    int armRotationFrom;
+    int armRotationTo;
+    int armLiftFrom;
+    int armLiftTo;
+    int clawLiftFrom;
+    int clawLiftTo;
+    int clawRotationFrom;
+    int clawRotationTo;
+    int clawFrom;
+    int clawTo;
 };
 
 #endif
