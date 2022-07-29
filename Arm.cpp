@@ -66,23 +66,6 @@ bool Arm::isManual()
     return this->manualMode;
 }
 
-void Arm::startCalibration(){
-
-};
-
-void Arm::calibrating(int value){
-
-};
-
-bool Arm::nextCalibrationStep()
-{
-    return false;
-};
-
-void Arm::stopValibrating(){
-
-};
-
 void Arm::manualMove(byte armRotationAngle,
                      byte armLiftAngle,
                      byte clawLiftAngle,

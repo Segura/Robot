@@ -3,9 +3,21 @@
 
 #include <Arduino.h>
 
-#define COUNT_PER_CENTIMETER 10.7527f
 #define MIN_SPEED 50
 #define MAX_SPEED 150
+
+struct PlatformSettings
+{
+    // PlatformSettings(byte maxSpeed, float ticksPerCentimeter);
+    byte maxSpeed;
+    float ticksPerCentimeter;
+    PlatformSettings();
+};
+
+// PlatformSettings::PlatformSettings(byte maxSpeed, float ticksPerCentimeter) {
+//     this->maxSpeed = maxSpeed;
+//     this->ticksPerCentimeter = ticksPerCentimeter;
+// }
 
 class Platform
 {
@@ -14,7 +26,7 @@ public:
              int leftEngineSpeedPin,
              int rightEngineDirectionPin,
              int rightEngineSpeedPin);
-    void init();
+    void init(PlatformSettings settings);
     void loop();
     void moveForward(int distance);
     void tickLeft();
@@ -22,8 +34,11 @@ public:
 
 private:
     void reset();
+    void moveEngine(unsigned int engineTicks, int enginePin);
     volatile unsigned int countLeft;
     volatile unsigned int countRight;
+    PlatformSettings settings;
+    byte maxSpeed;
     unsigned int distanceCount;
     int leftEngineDirectionPin;
     int leftEngineSpeedPin;

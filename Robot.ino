@@ -3,48 +3,41 @@
 #include "Defines.h"
 #include "Arm.h"
 #include "Platform.h"
-#include "Calibrator.h"
 
 Arm arm = Arm(ARM_ROTATION_SERVO_PIN, ARM_LIFT_SERVO_PIN, CLAW_LIFT_SERVO_PIN, CLAW_ROTATION_SERVO_PIN, CLAW_SERVO_PIN);
 Platform platform = Platform(LEFT_ENGINE_DIRECTION_PIN, LEFT_ENGINE_SPEED_PIN, RIGHT_ENGINE_DIRECTION_PIN, RIGHT_ENGINE_SPEED_PIN);
 
 Bounce manualModeButton = Bounce();
-Bounce calibrationButton = Bounce();
 Bounce testButton = Bounce();
 
-ezLED calibrationLed(CALIBRATION_LED_PIN);
-
 State state = State::NORMAL;
-
-Calibrator calibrator = Calibrator({ &arm }, &calibrationLed, onCalibrationFinish)
 
 void setup()
 {
     Serial.begin(9600);
-    // Ручной режим
-    manualModeButton.attach(MANUAL_MODE_BUTTON_PIN);
-    manualModeButton.interval(DEBOUNCE_INTERVAL);
-
-    pinMode(MANUAL_MODE_LED_PIN, OUTPUT);
-
-    arm.init();
-    platform.init();
-
-    // sizeof(ArmSettings);
+    
+    arm.init(ArmSettings {
+        ServoSetting(10, 170), // Arm rotation
+        ServoSetting(10, 170), // Arm lift
+        ServoSetting(10, 170), // Claw lift
+        ServoSetting(10, 170), // Claw rotation
+        ServoSetting(10, 170)  // Claw
+} );
+    platform.init(PlatformSettings {150, 10.0f});
 
     attachInterrupt(digitalPinToInterrupt(LEFT_ENGINE_ENCODER_PIN), readLeftEngineEncoder, RISING);
     attachInterrupt(digitalPinToInterrupt(RIGHT_ENGINE_ENCODER_PIN), readRightEngineEncoder, RISING);
 
     arm.reset();
 
-    // Калибровка
-
-    calibrationButton.attach(CALIBRATION_BUTTON_PIN);
-    calibrationButton.interval(DEBOUNCE_INTERVAL);
-
     // Тестовое
     testButton.attach(TEST_BUTTON_1_PIN);
     testButton.interval(DEBOUNCE_INTERVAL);
+
+    // Ручной режим
+    manualModeButton.attach(MANUAL_MODE_BUTTON_PIN);
+    manualModeButton.interval(DEBOUNCE_INTERVAL);
+    pinMode(MANUAL_MODE_LED_PIN, OUTPUT);
 }
 
 void loop()
@@ -59,26 +52,16 @@ void loop()
     case MANUAL:
         manualModeLoop();
         break;
-    case CALIBRATION:
-        calibrator.loop(analogRead(POT_1_PIN), calibrationButton.fell());
-        break;
     case NORMAL:
     default:
         normalLoop();
         break;
-    }
-
-    // Тестовое
-    if (testButton.fell())
-    {
-        platform.moveForward(5);
     }
 }
 
 void buttonsUpdate()
 {
     manualModeButton.update();
-    calibrationButton.update();
     testButton.update();
 }
 
@@ -91,17 +74,12 @@ void normalLoop()
         digitalWrite(MANUAL_MODE_LED_PIN, HIGH);
         return;
     }
-    if (calibrationButton.fell())
-    {
-        calibrator.start();
-        state = State::CALIBRATION;
-        return;
-    }
-}
 
-void onCalibrationFinish()
-{
-    state = State::NORMAL;
+    // Тестовое
+    if (testButton.fell())
+    {
+        platform.moveForward(5);
+    }
 }
 
 void manualModeLoop()

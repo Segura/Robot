@@ -3,7 +3,6 @@
 
 #include <Servo.h>
 #include "Component.h"
-#include "ICalibratable.h"
 
 #define MIN_INPUT_ANGLE 0
 #define MAX_INPUT_ANGLE 180
@@ -22,27 +21,47 @@ struct ServoSetting
     {
         return (min + max) / 2;
     }
+    ServoSetting(byte _min, byte _max)
+    {
+        min = _min;
+        max = _max;
+    }
 };
 
 struct ArmSettings
 {
+    // ArmSettings(ServoSetting armRotation,
+    //             ServoSetting armLift,
+    //             ServoSetting clawLift,
+    //             ServoSetting clawRotation,
+    //             ServoSetting claw);
     ServoSetting armRotation;
     ServoSetting armLift;
     ServoSetting clawLift;
     ServoSetting clawRotation;
     ServoSetting claw;
+    ArmSettings();
 };
 
-class Arm : public Component<ArmSettings>, public ICalibratable
+// ArmSettings::ArmSettings(ServoSetting armRotation,
+//                          ServoSetting armLift,
+//                          ServoSetting clawLift,
+//                          ServoSetting clawRotation,
+//                          ServoSetting claw)
+// {
+//     this->armRotation = armRotation;
+//     this->armLift = armLift;
+//     this->clawLift = clawLift;
+//     this->clawRotation = clawRotation;
+//     this->claw = claw;
+// }
+
+class Arm : public Component<ArmSettings>
 {
 public:
     Arm(int rotationPin, int armLiftPin, int clawLiftPin, int clawRotationPin, int clawPin);
     void init(ArmSettings settings);
     ArmSettings getSettings();
-    void startCalibration();
-    void calibrating(int value);
-    bool nextCalibrationStep();
-    void stopValibrating();
     void attach();
     void detach();
     void loop();

@@ -16,8 +16,10 @@ Platform::Platform(int leftEngineDirectionPin,
     this->rightEngineSpeedPin = rightEngineSpeedPin;
 }
 
-void Platform::init()
+void Platform::init(PlatformSettings settings)
 {
+    this->settings = settings;
+
     pinMode(this->leftEngineDirectionPin, OUTPUT);
     pinMode(this->leftEngineSpeedPin, OUTPUT);
 
@@ -30,30 +32,27 @@ void Platform::init()
 void Platform::moveForward(int distance)
 {
     this->reset();
-    this->distanceCount = distance * COUNT_PER_CENTIMETER;
+    this->distanceCount = distance * this->settings.ticksPerCentimeter;
     digitalWrite(this->leftEngineDirectionPin, LOW);
     digitalWrite(this->rightEngineDirectionPin, LOW);
 }
 
 void Platform::loop()
 {
-    if (this->countLeft < this->distanceCount)
+    this->moveEngine(this->countLeft, this->leftEngineSpeedPin);
+    this->moveEngine(this->countRight, this->rightEngineSpeedPin);
+}
+
+void Platform::moveEngine(unsigned int engineTicks, int enginePin)
+{
+    if (engineTicks < this->distanceCount)
     {
-        float progress = easyPorabolic(1.0f * this->countLeft / this->distanceCount);
-        analogWrite(this->leftEngineSpeedPin, max(MAX_SPEED * progress, MIN_SPEED));
+        float progress = easyPorabolic(1.0f * engineTicks / this->distanceCount);
+        analogWrite(enginePin, max(this->maxSpeed * progress, MIN_SPEED));
     }
     else
     {
-        analogWrite(this->leftEngineSpeedPin, 0);
-    }
-    if (this->countRight < this->distanceCount)
-    {
-        float progress = easyPorabolic(1.0f * this->countRight / this->distanceCount);
-        analogWrite(this->rightEngineSpeedPin, max(MAX_SPEED * progress, MIN_SPEED));
-    }
-    else
-    {
-        analogWrite(this->rightEngineSpeedPin, 0);
+        analogWrite(enginePin, 0);
     }
 }
 
@@ -62,6 +61,7 @@ void Platform::reset()
     this->countLeft = 0;
     this->countRight = 0;
     this->distanceCount = 0;
+    this->maxSpeed = min(this->settings.maxSpeed, MAX_SPEED);
     analogWrite(this->leftEngineSpeedPin, 0);
     analogWrite(this->rightEngineSpeedPin, 0);
 }
